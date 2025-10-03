@@ -1,15 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useBalance, useChainId } from 'wagmi';
-import { parseEther } from 'viem';
-import { WalletConnect } from '@/components/WalletConnect';
-import { NEGOTIATION_ABI } from '@/lib/contracts/negotiation';
-import { CONTRACTS } from '@/lib/contracts/config';
+import { Suspense } from 'react';
+import { Header } from '@/components/Header';
+import { NegotiateForm } from '@/components/NegotiateForm';
 
 export default function NegotiatePage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
+      <Header />
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Suspense fallback={<div className="text-center text-zinc-500 dark:text-zinc-400">Loading...</div>}>
+          <NegotiateForm />
+        </Suspense>
+      </main>
+    </div>
+  );
+}
   const searchParams = useSearchParams();
   const router = useRouter();
   const { address, isConnected } = useAccount();
@@ -80,7 +87,7 @@ export default function NegotiatePage() {
         abi: NEGOTIATION_ABI,
         functionName: 'startNegotiation',
         args: [seller as `0x${string}`, domain, offerValue],
-        gas: 500000n, // Explicit gas limit
+        gas: BigInt(500000), // Explicit gas limit
       });
     } catch (err) {
       console.error('Error initiating negotiation:', err);
@@ -90,30 +97,7 @@ export default function NegotiatePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
-      {/* Header */}
-      <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer">
-                Krine
-              </h1>
-            </Link>
-            <span className="text-sm text-zinc-600 dark:text-zinc-400 hidden sm:inline">
-              On-Chain Domain Negotiation
-            </span>
-          </div>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/inbox"
-              className="text-zinc-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
-            >
-              Inbox
-            </Link>
-            <WalletConnect />
-          </nav>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
