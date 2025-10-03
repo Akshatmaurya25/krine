@@ -1,36 +1,241 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Krine - On-Chain Domain Negotiation Platform
+
+Krine is a decentralized platform for secure domain trading with on-chain messaging and smart contract escrow, powered by the Doma Protocol.
+
+## Features
+
+- **On-Chain Messaging**: Negotiate directly with domain owners through secure blockchain-based messaging
+- **Smart Contract Escrow**: Automated fund management with secure escrow contracts
+- **Doma Protocol Integration**: Built on Doma Protocol for verified domain ownership
+- **Real-time Updates**: Live negotiation status and message updates
+- **Multi-Party Support**: Buyer and seller interactions with role-based permissions
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
+- **Web3**: Wagmi, Viem, RainbowKit, TanStack Query
+- **Smart Contracts**: Solidity 0.8.20
+- **Development**: Hardhat, Ethers.js
+- **Chain**: Polygon Amoy Testnet (EVM-compatible)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+ and npm
+- MetaMask or compatible Web3 wallet
+- Testnet tokens (Polygon Amoy MATIC)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd krine
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Setup environment variables**
+
+   Copy `.env.example` to `.env` and fill in the required values:
+   ```bash
+   cp .env.example .env
+   ```
+
+   Required variables:
+   - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`: Get from [WalletConnect Cloud](https://cloud.walletconnect.com)
+   - `PRIVATE_KEY`: Your wallet private key for contract deployment
+   - Contract addresses (will be populated after deployment)
+
+### Smart Contract Deployment
+
+Smart contracts are in the `contract-deployment` folder:
+
+1. **Compile contracts**
+   ```bash
+   cd contract-deployment
+   npx hardhat compile
+   ```
+
+2. **Deploy contracts to testnet**
+   ```bash
+   cd contract-deployment
+   npm run deploy
+   # Or manually: npx hardhat run scripts/deploy.cjs --network amoy
+   ```
+
+3. **Update .env file**
+
+   Copy the deployed contract addresses from the deployment output and update your `.env` in the root folder:
+   ```
+   NEXT_PUBLIC_NEGOTIATION_CONTRACT_ADDRESS=0x...
+   NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS=0x...
+   ```
+
+### Running the Application
+
+1. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+2. **Open your browser**
+
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+3. **Connect your wallet**
+
+   Click "Connect Wallet" and connect your MetaMask or compatible wallet
+
+## Usage
+
+### Starting a Negotiation
+
+1. On the home page, enter the domain name and seller's wallet address
+2. Click "Start Negotiation" and confirm the transaction
+3. You'll be redirected to the negotiation page
+
+### Negotiation Page
+
+- **Send Messages**: Type and send messages to negotiate with the other party
+- **Make Offers**: Check "Include Offer" and enter an amount to make a price offer
+- **Accept/Reject** (Seller): Accept the current offer or reject the negotiation
+- **View History**: Scroll through the message history
+
+### Escrow Process
+
+1. **Deposit**: After seller accepts, buyer deposits funds into escrow
+2. **Release**: Buyer releases funds to seller after domain transfer
+3. **Refund**: Seller can refund at any time, or buyer after 30 days
+
+### Inbox
+
+View all your active and completed negotiations in one place. Click any negotiation to continue the conversation.
+
+## Project Structure
+
+```
+krine/
+├── contracts/              # Solidity smart contracts
+│   ├── Escrow.sol         # Escrow contract
+│   └── Negotiation.sol    # Negotiation contract
+├── scripts/               # Deployment scripts
+│   └── deploy.js
+├── src/
+│   ├── app/               # Next.js app directory
+│   │   ├── inbox/        # Inbox page
+│   │   ├── negotiation/  # Negotiation pages
+│   │   ├── layout.tsx    # Root layout
+│   │   ├── page.tsx      # Home page
+│   │   └── providers.tsx # Web3 providers
+│   ├── components/        # React components
+│   │   ├── DomainSearch.tsx
+│   │   ├── EscrowActions.tsx
+│   │   ├── Inbox.tsx
+│   │   ├── NegotiationChat.tsx
+│   │   └── WalletConnect.tsx
+│   └── lib/               # Libraries and utilities
+│       ├── contracts/     # Contract ABIs and configs
+│       └── wagmi/         # Wagmi configuration
+├── hardhat.config.js      # Hardhat configuration
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Smart Contracts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Negotiation Contract
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Key Functions:**
+- `startNegotiation(seller, domain, initialOffer)` - Start a new negotiation
+- `sendMessage(negotiationId, content, offerAmount)` - Send a message/offer
+- `acceptOffer(negotiationId)` - Seller accepts the current offer
+- `closeNegotiation(negotiationId, rejected)` - Close negotiation
+- `getMessages(negotiationId)` - Retrieve all messages
+- `getUserNegotiations(user)` - Get all negotiations for a user
 
-## Learn More
+### Escrow Contract
 
-To learn more about Next.js, take a look at the following resources:
+**Key Functions:**
+- `deposit(seller, domain)` - Deposit funds (payable)
+- `release(escrowId)` - Release funds to seller (buyer only)
+- `refund(escrowId)` - Refund to buyer (seller anytime, buyer after 30 days)
+- `getEscrow(escrowId)` - Get escrow details
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Running Tests
 
-## Deploy on Vercel
+```bash
+npx hardhat test
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Local Hardhat Network
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Terminal 1
+npx hardhat node
+
+# Terminal 2
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+### Building for Production
+
+```bash
+npm run build
+npm start
+```
+
+## Troubleshooting
+
+### Wallet Connection Issues
+- Ensure you're on the correct network (Polygon Amoy Testnet)
+- Check that you have testnet tokens
+- Try refreshing the page and reconnecting
+
+### Transaction Failures
+- Ensure you have enough MATIC for gas fees
+- Check that contract addresses are correctly set in `.env`
+- Verify you have the correct permissions (buyer/seller)
+
+### Contract Not Found
+- Verify contract addresses in `.env` match deployed contracts
+- Ensure you're on the correct network
+- Check that contracts are deployed successfully
+
+## Security Considerations
+
+⚠️ **This is a hackathon MVP project**. For production use:
+- Conduct thorough smart contract audits
+- Implement additional access controls
+- Add dispute resolution mechanisms
+- Implement proper domain ownership verification via Doma Protocol APIs
+- Add rate limiting and spam protection
+- Implement comprehensive error handling
+
+## Contributing
+
+This project was built for the Doma Protocol Hackathon. Contributions, issues, and feature requests are welcome!
+
+## License
+
+MIT
+
+## Acknowledgments
+
+- Built for the Doma Protocol Hackathon
+- Powered by Doma Protocol
+- Uses RainbowKit for wallet connectivity
+- Deployed on Polygon network
+
+## Contact & Support
+
+For questions or support, please open an issue in the repository.
+
+---
+
+**Happy Trading! 🚀**
