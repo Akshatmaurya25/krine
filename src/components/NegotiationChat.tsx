@@ -36,12 +36,34 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
 
   // Fetch negotiation data
-  const { data: negotiationData, refetch: refetchNegotiation } = useReadContract({
+  const { data: rawNegotiationData, refetch: refetchNegotiation, error: negotiationError, isLoading: isLoadingNegotiation } = useReadContract({
     address: CONTRACTS.NEGOTIATION,
     abi: NEGOTIATION_ABI,
     functionName: 'getNegotiation',
     args: [negotiationId],
-  }) as { data: NegotiationData | undefined; refetch: () => void };
+  });
+
+  // Transform tuple to object
+  const negotiationData: NegotiationData | undefined = rawNegotiationData
+    ? {
+        id: rawNegotiationData[0] as bigint,
+        buyer: rawNegotiationData[1] as string,
+        seller: rawNegotiationData[2] as string,
+        domain: rawNegotiationData[3] as string,
+        initialOffer: rawNegotiationData[4] as bigint,
+        currentOffer: rawNegotiationData[5] as bigint,
+        status: rawNegotiationData[6] as NegotiationStatus,
+        createdAt: rawNegotiationData[7] as bigint,
+        updatedAt: rawNegotiationData[8] as bigint,
+      }
+    : undefined;
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Negotiation ID:', negotiationId.toString());
+    console.log('Raw negotiation data:', rawNegotiationData);
+    console.log('Transformed negotiation data:', negotiationData);
+  }, [negotiationId, rawNegotiationData, negotiationData]);
 
   // Fetch messages
   const { data: messages, refetch: refetchMessages } = useReadContract({
@@ -100,12 +122,18 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
     });
   };
 
-  const formatAddress = (addr: string) => {
+  const formatAddress = (addr?: string) => {
+    if (!addr) return 'Unknown';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  const formatTimestamp = (timestamp: bigint) => {
-    return new Date(Number(timestamp) * 1000).toLocaleString();
+  const formatTimestamp = (timestamp?: bigint) => {
+    if (!timestamp) return '';
+    try {
+      return new Date(Number(timestamp) * 1000).toLocaleString();
+    } catch {
+      return '';
+    }
   };
 
   const getStatusBadge = (status: NegotiationStatus) => {
@@ -115,7 +143,7 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
       [NegotiationStatus.Rejected]: { text: 'Rejected', class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
       [NegotiationStatus.Closed]: { text: 'Closed', class: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200' },
     };
-    const badge = badges[status];
+    const badge = badges[status] || { text: 'Unknown', class: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200' };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.class}`}>
         {badge.text}
@@ -123,10 +151,30 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
     );
   };
 
-  if (!negotiationData) {
+  if (negotiationError) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-zinc-500 dark:text-zinc-400">Loading negotiation...</div>
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <div className="text-red-500 dark:text-red-400 font-semibold">Error loading negotiation</div>
+        <div className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md text-center">
+          {negotiationError.message}
+        </div>
+        <button
+          onClick={() => refetchNegotiation()}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (isLoadingNegotiation || !negotiationData || !negotiationData.buyer || !negotiationData.seller) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+        <div className="text-zinc-500 dark:text-zinc-400">
+          {isLoadingNegotiation ? 'Loading negotiation...' : 'Processing data...'}
+        </div>
       </div>
     );
   }
@@ -140,8 +188,8 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl font-bold">{negotiationData.domain}</h1>
-          {getStatusBadge(negotiationData.status)}
+          <h1 className="text-2xl font-bold">{negotiationData.domain || 'Unknown Domain'}</h1>
+          {negotiationData.status !== undefined && getStatusBadge(negotiationData.status)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
@@ -160,7 +208,9 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
           </div>
           <div>
             <span className="opacity-80">Current Offer:</span>
-            <div className="text-xl font-bold">{formatEther(negotiationData.currentOffer)} MATIC</div>
+            <div className="text-xl font-bold">
+              {negotiationData.currentOffer ? formatEther(negotiationData.currentOffer) : '0'} MATIC
+            </div>
           </div>
         </div>
       </div>
@@ -169,8 +219,10 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 dark:bg-zinc-950">
         {messages && messages.length > 0 ? (
           messages.map((message, index) => {
+            if (!message || !message.sender) return null;
+
             const isCurrentUser = address?.toLowerCase() === message.sender.toLowerCase();
-            const hasOffer = message.offerAmount > BigInt(0);
+            const hasOffer = message.offerAmount && message.offerAmount > BigInt(0);
 
             return (
               <div
@@ -196,9 +248,9 @@ export function NegotiationChat({ negotiationId }: { negotiationId: bigint }) {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-sm leading-relaxed">{message.content || ''}</p>
                   <p className={`text-xs mt-2 opacity-60`}>
-                    {formatTimestamp(message.timestamp)}
+                    {message.timestamp ? formatTimestamp(message.timestamp) : ''}
                   </p>
                 </div>
               </div>

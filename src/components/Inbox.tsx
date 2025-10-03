@@ -75,6 +75,11 @@ function NegotiationCard({ negotiationId, userAddress }: { negotiationId: bigint
   }
 
   const [id, buyer, seller, domain, initialOffer, currentOffer, status, createdAt, updatedAt] = negotiationData;
+
+  if (!buyer || !seller || !domain) {
+    return null;
+  }
+
   const isBuyer = userAddress.toLowerCase() === buyer.toLowerCase();
 
   const getStatusBadge = (status: number) => {
@@ -84,12 +89,16 @@ function NegotiationCard({ negotiationId, userAddress }: { negotiationId: bigint
       [NegotiationStatus.Rejected]: { text: 'Rejected', class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
       [NegotiationStatus.Closed]: { text: 'Closed', class: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200' },
     };
-    const badge = badges[status];
+    const badge = badges[status] || { text: 'Unknown', class: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200' };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.class}`}>
         {badge.text}
       </span>
     );
+  };
+
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
   return (
@@ -102,7 +111,7 @@ function NegotiationCard({ negotiationId, userAddress }: { negotiationId: bigint
             </h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {isBuyer ? 'Buying from' : 'Selling to'}{' '}
-              <span className="font-mono">{`${(isBuyer ? seller : buyer).slice(0, 6)}...${(isBuyer ? seller : buyer).slice(-4)}`}</span>
+              <span className="font-mono">{formatAddress(isBuyer ? seller : buyer)}</span>
             </p>
           </div>
           {getStatusBadge(Number(status))}
@@ -112,20 +121,20 @@ function NegotiationCard({ negotiationId, userAddress }: { negotiationId: bigint
           <div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Initial Offer</p>
             <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              {formatEther(initialOffer)} MATIC
+              {initialOffer ? formatEther(initialOffer) : '0'} MATIC
             </p>
           </div>
           <div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Current Offer</p>
             <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-              {formatEther(currentOffer)} MATIC
+              {currentOffer ? formatEther(currentOffer) : '0'} MATIC
             </p>
           </div>
         </div>
 
         <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Last updated: {new Date(Number(updatedAt) * 1000).toLocaleString()}
+            Last updated: {updatedAt ? new Date(Number(updatedAt) * 1000).toLocaleString() : 'Unknown'}
           </p>
         </div>
       </div>

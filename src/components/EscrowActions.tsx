@@ -84,16 +84,16 @@ export function EscrowActions({ negotiationId, seller, domain, currentOffer }: E
               <span className="font-semibold">Next Step:</span> Buyer deposits funds into escrow
             </p>
             <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
-              Amount: {formatEther(currentOffer)} MATIC
+              Amount: {currentOffer ? formatEther(currentOffer) : '0'} MATIC
             </p>
           </div>
 
           <button
             onClick={handleDeposit}
-            disabled={isPending || isConfirming}
+            disabled={isPending || isConfirming || !currentOffer}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
-            {isPending || isConfirming ? 'Processing...' : `Deposit ${formatEther(currentOffer)} MATIC`}
+            {isPending || isConfirming ? 'Processing...' : `Deposit ${currentOffer ? formatEther(currentOffer) : '0'} MATIC`}
           </button>
 
           {escrowData && (
@@ -104,13 +104,13 @@ export function EscrowActions({ negotiationId, seller, domain, currentOffer }: E
                 </h3>
                 <div className="space-y-1 text-sm">
                   <p className="text-zinc-600 dark:text-zinc-400">
-                    Escrow ID: <span className="font-mono">{escrowId?.toString()}</span>
+                    Escrow ID: <span className="font-mono">{escrowId?.toString() || 'N/A'}</span>
                   </p>
                   <p className="text-zinc-600 dark:text-zinc-400">
-                    Domain: <span className="font-semibold">{escrowData[2] as string}</span>
+                    Domain: <span className="font-semibold">{(escrowData[2] as string) || 'Unknown'}</span>
                   </p>
                   <p className="text-zinc-600 dark:text-zinc-400">
-                    Amount: <span className="font-semibold">{formatEther(escrowData[3] as bigint)} MATIC</span>
+                    Amount: <span className="font-semibold">{escrowData[3] ? formatEther(escrowData[3] as bigint) : '0'} MATIC</span>
                   </p>
                 </div>
               </div>
